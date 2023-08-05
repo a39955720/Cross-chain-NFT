@@ -9,7 +9,7 @@ error CrossChainNFT__AlreadyInitialized();
 error CorssChainNFT__WrongPassword();
 error CorssChainNFT__YouCannotCallThisFunctionDirectly();
 
-contract CorssChainNFT is ERC721URIStorage {
+contract CrossChainNFT is ERC721URIStorage {
     // Enumeration representing the types of NFTs
     enum NFT {
         GOLD,
@@ -33,11 +33,11 @@ contract CorssChainNFT is ERC721URIStorage {
     }
 
     // Modifier to restrict certain functions to specific addresses
-    modifier notMessenger() {
+    modifier onlyMessenger() {
         if (
             msg.sender != 0x5086d1eEF304eb5284A0f6720f79403b4e9bE294 &&
             msg.sender != 0x8e5693140eA606bcEB98761d9beB1BC87383706D &&
-            msg.sender != 0x363B4B1ADa52E50353f746999bd9E94395190d2C &&
+            msg.sender != 0x9779A9D2f3B66A4F4d27cB99Ab6cC1266b3Ca9af &&
             msg.sender != 0x4200000000000000000000000000000000000007
         ) {
             revert CorssChainNFT__YouCannotCallThisFunctionDirectly();
@@ -69,7 +69,7 @@ contract CorssChainNFT is ERC721URIStorage {
         uint256 tokenId,
         uint8 randNum,
         uint256 _password
-    ) public notMessenger wrongPassword(_password) {
+    ) public onlyMessenger wrongPassword(_password) {
         NFT nft = getIndex(randNum);
         _safeMint(msgSender, tokenId);
         _setTokenURI(tokenId, s_CCNTokenUris[uint8(nft)]);
@@ -94,7 +94,7 @@ contract CorssChainNFT is ERC721URIStorage {
     function approve(
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) notMessenger {
+    ) public override(ERC721, IERC721) onlyMessenger {
         super.approve(to, tokenId);
     }
 
@@ -102,7 +102,7 @@ contract CorssChainNFT is ERC721URIStorage {
         address from,
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) notMessenger {
+    ) public override(ERC721, IERC721) onlyMessenger {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -110,7 +110,7 @@ contract CorssChainNFT is ERC721URIStorage {
         address from,
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) notMessenger {
+    ) public override(ERC721, IERC721) onlyMessenger {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -119,14 +119,14 @@ contract CorssChainNFT is ERC721URIStorage {
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public override(ERC721, IERC721) notMessenger {
+    ) public override(ERC721, IERC721) onlyMessenger {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 
     function setApprovalForAll(
         address operator,
         bool approved
-    ) public override(ERC721, IERC721) notMessenger {
+    ) public override(ERC721, IERC721) onlyMessenger {
         super.setApprovalForAll(operator, approved);
     }
 }
