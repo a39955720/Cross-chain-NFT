@@ -1,1 +1,3 @@
 .env
+foundry/lib/node_modules
+text.txt

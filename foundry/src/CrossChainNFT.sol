@@ -8,6 +8,7 @@ import {ERC721URIStorage, ERC721, IERC721} from "@openzeppelin/contracts/token/E
 error CrossChainNFT__AlreadyInitialized();
 error CorssChainNFT__WrongPassword();
 error CorssChainNFT__YouCannotCallThisFunctionDirectly();
+error CrossChainNFT_NotOwner();
 
 contract CrossChainNFT is ERC721URIStorage {
     // Enumeration representing the types of NFTs
@@ -20,6 +21,8 @@ contract CrossChainNFT is ERC721URIStorage {
     uint256 private immutable i_password;
     bool private s_initialized;
     string[] internal s_CCNTokenUris;
+    address private i_owner;
+    address private i_fromL1ControlL2Addr;
 
     // Event fired when a new NFT is minted
     event NftMinted(NFT nft, address minter);
@@ -30,14 +33,13 @@ contract CrossChainNFT is ERC721URIStorage {
     ) ERC721("Corss Chain NFT", "CCN") {
         i_password = _password; // Set the password
         _initializeContract(CCNTokenUris); // Initialize the contract with given token URIs
+        i_owner = msg.sender;
     }
 
     // Modifier to restrict certain functions to specific addresses
     modifier onlyMessenger() {
         if (
-            msg.sender != 0x5086d1eEF304eb5284A0f6720f79403b4e9bE294 &&
-            msg.sender != 0x8e5693140eA606bcEB98761d9beB1BC87383706D &&
-            msg.sender != 0x9779A9D2f3B66A4F4d27cB99Ab6cC1266b3Ca9af &&
+            msg.sender != i_fromL1ControlL2Addr &&
             msg.sender != 0x4200000000000000000000000000000000000007
         ) {
             revert CorssChainNFT__YouCannotCallThisFunctionDirectly();
@@ -61,6 +63,13 @@ contract CrossChainNFT is ERC721URIStorage {
         }
         s_CCNTokenUris = CCNTokenUris; // Store the provided token URIs
         s_initialized = true; // Mark the contract as initialized
+    }
+
+    function setFromL1ControlL2Addr(address fromL1ControlL2Addr) public {
+        if (msg.sender != i_owner) {
+            revert CrossChainNFT_NotOwner();
+        }
+        i_fromL1ControlL2Addr = fromL1ControlL2Addr;
     }
 
     // Public function to mint a new NFT based on random number and token ID
