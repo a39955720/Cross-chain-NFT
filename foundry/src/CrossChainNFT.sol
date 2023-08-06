@@ -2,7 +2,9 @@
 pragma solidity ^0.8.18;
 
 // Import OpenZeppelin ERC721URIStorage extension for ERC721 tokens with URI storage
-import {ERC721URIStorage, ERC721, IERC721} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 // Error declarations
 error CrossChainNFT__AlreadyInitialized();
@@ -28,11 +30,11 @@ contract CrossChainNFT is ERC721URIStorage {
     event NftMinted(NFT nft, address minter);
 
     constructor(
-        string[3] memory CCNTokenUris,
+        string[3] memory ccnTokenUris,
         uint256 _password
     ) ERC721("Corss Chain NFT", "CCN") {
         i_password = _password; // Set the password
-        _initializeContract(CCNTokenUris); // Initialize the contract with given token URIs
+        _initializeContract(ccnTokenUris); // Initialize the contract with given token URIs
         i_owner = msg.sender;
     }
 
@@ -88,11 +90,11 @@ contract CrossChainNFT is ERC721URIStorage {
     // Internal function to determine the NFT type based on the random number
     function getIndex(uint8 randNum) public pure returns (NFT) {
         if (randNum < 9) {
-            return NFT(0);
+            return NFT.GOLD;
         } else if (randNum < 39) {
-            return NFT(1);
+            return NFT.SILVER;
         } else {
-            return NFT(2);
+            return NFT.BRONZE;
         }
     }
 
@@ -103,7 +105,7 @@ contract CrossChainNFT is ERC721URIStorage {
     function approve(
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) onlyMessenger {
+    ) public override onlyMessenger {
         super.approve(to, tokenId);
     }
 
@@ -111,7 +113,7 @@ contract CrossChainNFT is ERC721URIStorage {
         address from,
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) onlyMessenger {
+    ) public override onlyMessenger {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -119,7 +121,7 @@ contract CrossChainNFT is ERC721URIStorage {
         address from,
         address to,
         uint256 tokenId
-    ) public override(ERC721, IERC721) onlyMessenger {
+    ) public override onlyMessenger {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -128,14 +130,14 @@ contract CrossChainNFT is ERC721URIStorage {
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public override(ERC721, IERC721) onlyMessenger {
+    ) public override onlyMessenger {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 
     function setApprovalForAll(
         address operator,
         bool approved
-    ) public override(ERC721, IERC721) onlyMessenger {
+    ) public override onlyMessenger {
         super.setApprovalForAll(operator, approved);
     }
 }
