@@ -1,3 +1,6 @@
 .env
 foundry/lib/node_modules
+foundry/broadcast
+foundry/cache
+foundry/out
 text.txt
