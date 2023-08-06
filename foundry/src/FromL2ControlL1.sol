@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 // Import CrossDomainMessenger contract
 import {ICrossDomainMessenger} from "@eth-optimism/contracts/libraries/bridge/ICrossDomainMessenger.sol";
 
-contract FromL2_ControlL1 {
+contract FromL2ControlL1 {
     address private constant GOERLI_CROSSDOMAINMESSENGERADDR =
         0x4200000000000000000000000000000000000007;
     address private immutable i_l1Controller;

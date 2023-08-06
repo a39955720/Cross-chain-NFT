@@ -10,7 +10,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 error CrossChainNFT__AlreadyInitialized();
 error CorssChainNFT__WrongPassword();
 error CorssChainNFT__YouCannotCallThisFunctionDirectly();
-error CrossChainNFT_NotOwner();
+error CrossChainNFT__NotOwner();
 
 contract CrossChainNFT is ERC721URIStorage {
     // Enumeration representing the types of NFTs
@@ -69,7 +69,7 @@ contract CrossChainNFT is ERC721URIStorage {
 
     function setFromL1ControlL2Addr(address fromL1ControlL2Addr) public {
         if (msg.sender != i_owner) {
-            revert CrossChainNFT_NotOwner();
+            revert CrossChainNFT__NotOwner();
         }
         i_fromL1ControlL2Addr = fromL1ControlL2Addr;
     }

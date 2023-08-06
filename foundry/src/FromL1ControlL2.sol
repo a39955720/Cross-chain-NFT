@@ -10,8 +10,9 @@ import {CrossChainNFT} from "./CrossChainNFT.sol";
 // Error declarations
 error FromL1ControlL2__ControllerStateNotOpen();
 error FromL1ControlL2__YouCannotCallThisFunctionDirectly();
+error FromL1ControlL2_NotOwner();
 
-contract FromL1_ControlL2 is VRFConsumerBaseV2 {
+contract FromL1ControlL2 is VRFConsumerBaseV2 {
     // Enumeration representing the state of the controller
     enum ControllerState {
         OPEN,
@@ -36,6 +37,7 @@ contract FromL1_ControlL2 is VRFConsumerBaseV2 {
     address private immutable i_crossChainNFTL1Addr;
     address[] internal i_crossChainNFTL2Addr;
     uint256 private immutable i_password;
+    address private immutable i_owner;
     ControllerState private s_controllerState;
     uint256 private s_tokenCounter;
     address private s_msgSender;
@@ -61,6 +63,7 @@ contract FromL1_ControlL2 is VRFConsumerBaseV2 {
         i_callbackGasLimit = callbackGasLimit;
         s_controllerState = ControllerState.OPEN;
         s_tokenCounter = 0;
+        i_owner = msg.sender;
     }
 
     // Modifier to restrict certain functions to when the controller state is OPEN
@@ -205,17 +208,28 @@ contract FromL1_ControlL2 is VRFConsumerBaseV2 {
         ICrossDomainMessenger(OP_CROSSDOMAINMESSENGERADDR).sendMessage(
             i_crossChainNFTL2Addr[0],
             message,
-            1000000 // within the free gas limit amount
+            200000 // within the free gas limit amount
         );
         ICrossDomainMessenger(BASE_CROSSDOMAINMESSENGERADDR).sendMessage(
             i_crossChainNFTL2Addr[1],
             message,
-            1000000
+            300000
         );
         ICrossDomainMessenger(ZORA_CROSSDOMAINMESSENGERADDR).sendMessage(
             i_crossChainNFTL2Addr[2],
             message,
-            1000000
+            600000
         );
+    }
+
+    function setControllerStateToOpen() public {
+        if (msg.sender != i_owner) {
+            revert FromL1ControlL2_NotOwner();
+        }
+        s_controllerState = ControllerState.OPEN;
+    }
+
+    function getControllerState() public view returns (ControllerState) {
+        return s_controllerState;
     }
 }
