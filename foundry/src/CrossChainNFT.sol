@@ -4,7 +4,6 @@ pragma solidity ^0.8.18;
 // Import OpenZeppelin ERC721URIStorage extension for ERC721 tokens with URI storage
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 // Error declarations
 error CrossChainNFT__AlreadyInitialized();
@@ -22,26 +21,31 @@ contract CrossChainNFT is ERC721URIStorage {
 
     uint256 private immutable i_password;
     bool private s_initialized;
-    string[] internal s_CCNTokenUris;
+    string[] internal s_ccnTokenUris;
     address private i_owner;
-    address private i_fromL1ControlL2Addr;
+    address private s_fromL1ControlL2Addr;
 
     // Event fired when a new NFT is minted
     event NftMinted(NFT nft, address minter);
 
+    /**
+     * @dev Constructor to initialize the CrossChainNFT contract
+     * @param ccnTokenUris (string[3] memory) - URIs of the NFT tokens
+     * @param _password (uint256) - password for function validation
+     */
     constructor(
         string[3] memory ccnTokenUris,
         uint256 _password
     ) ERC721("Corss Chain NFT", "CCN") {
         i_password = _password; // Set the password
-        _initializeContract(ccnTokenUris); // Initialize the contract with given token URIs
+        s_ccnTokenUris = ccnTokenUris; // Initialize the contract with given token URIs
         i_owner = msg.sender;
     }
 
     // Modifier to restrict certain functions to specific addresses
     modifier onlyMessenger() {
         if (
-            msg.sender != i_fromL1ControlL2Addr &&
+            msg.sender != s_fromL1ControlL2Addr &&
             msg.sender != 0x4200000000000000000000000000000000000007
         ) {
             revert CorssChainNFT__YouCannotCallThisFunctionDirectly();
@@ -57,24 +61,29 @@ contract CrossChainNFT is ERC721URIStorage {
         _;
     }
 
-    // Private function to initialize the contract with token URIs
-    function _initializeContract(string[3] memory CCNTokenUris) private {
-        // Check if the contract is already initialized
-        if (s_initialized) {
-            revert CrossChainNFT__AlreadyInitialized();
-        }
-        s_CCNTokenUris = CCNTokenUris; // Store the provided token URIs
-        s_initialized = true; // Mark the contract as initialized
-    }
-
+    /**
+     * @dev Function to set the address of the L1 to L2 bridge contract
+     * @param fromL1ControlL2Addr (address) - address of the L1 to L2 bridge contract
+     */
     function setFromL1ControlL2Addr(address fromL1ControlL2Addr) public {
         if (msg.sender != i_owner) {
             revert CrossChainNFT__NotOwner();
         }
-        i_fromL1ControlL2Addr = fromL1ControlL2Addr;
+        if (s_initialized) {
+            revert CrossChainNFT__AlreadyInitialized();
+        }
+        s_fromL1ControlL2Addr = fromL1ControlL2Addr;
+        s_initialized = true;
     }
 
-    // Public function to mint a new NFT based on random number and token ID
+    /**
+     * @dev Public function to mint a new NFT based on a random number and token ID
+     *
+     * @param msgSender (address) - address of the Minter
+     * @param tokenId (uint256) - token ID of the newly minted NFT
+     * @param randNum (uint8) - random number used to determine the NFT type
+     * @param _password (uint256) - password provided to verify access
+     */
     function mintNFT(
         address msgSender,
         uint256 tokenId,
@@ -83,12 +92,17 @@ contract CrossChainNFT is ERC721URIStorage {
     ) public onlyMessenger wrongPassword(_password) {
         NFT nft = getIndex(randNum);
         _safeMint(msgSender, tokenId);
-        _setTokenURI(tokenId, s_CCNTokenUris[uint8(nft)]);
+        _setTokenURI(tokenId, s_ccnTokenUris[uint8(nft)]);
         emit NftMinted(nft, msgSender);
     }
 
-    // Internal function to determine the NFT type based on the random number
-    function getIndex(uint8 randNum) public pure returns (NFT) {
+    /**
+     * @dev Internal function to determine the NFT type based on the random number
+     *
+     * @param randNum (uint8) - random number used to determine NFT type
+     * @return NFT - type of NFT based on the random number
+     */
+    function getIndex(uint8 randNum) internal pure returns (NFT) {
         if (randNum < 9) {
             return NFT.GOLD;
         } else if (randNum < 39) {
@@ -139,5 +153,22 @@ contract CrossChainNFT is ERC721URIStorage {
         bool approved
     ) public override onlyMessenger {
         super.setApprovalForAll(operator, approved);
+    }
+
+    // Getter functions...
+    function getTokenUris(uint256 index) public view returns (string memory) {
+        return s_ccnTokenUris[index];
+    }
+
+    function getOwner() public view returns (address) {
+        return i_owner;
+    }
+
+    function getInitialized() public view returns (bool) {
+        return s_initialized;
+    }
+
+    function getFromL1ControlL2Addr() public view returns (address) {
+        return s_fromL1ControlL2Addr;
     }
 }

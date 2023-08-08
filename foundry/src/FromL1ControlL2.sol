@@ -74,20 +74,6 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
         _;
     }
 
-    // Modifier to restrict certain functions to be called only by the CrossDomainMessenger
-    modifier onlyMessenger() {
-        if (msg.sender != 0x4200000000000000000000000000000000000007) {
-            revert FromL1ControlL2__YouCannotCallThisFunctionDirectly();
-        }
-        _;
-    }
-
-    //Only FromL2_ControlL1 can call this mintNFT function
-    function mintNFT(address msgSender) public onlyOpen onlyMessenger {
-        s_msgSender = msgSender;
-        mintNFT();
-    }
-
     //Everyone can call this mintNFT function
     function mintNFT() public onlyOpen {
         s_controllerState = ControllerState.CALCULATING;

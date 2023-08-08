@@ -3,16 +3,23 @@ pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
 import {FromL1ControlL2} from "../src/FromL1ControlL2.sol";
+import {DeployCrossChainNFT} from "./DeployCrossChainNFT.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {AddConsumer, CreateSubscription, FundSubscription} from "./Interactions.s.sol";
 
 contract DeployFromL1ControlL2 is Script {
-    function run() external returns (FromL1ControlL2, HelperConfig) {
+    function run() external returns (FromL1ControlL2, HelperConfig, address) {
         // Create a new instance of the HelperConfig contract
         HelperConfig helperConfig = new HelperConfig();
         AddConsumer addConsumer;
+        address crossChainNFTL1Addr;
         // Get the address of the CrossChainNFT contract deployed on Layer 1 (Goerli testnet)
-        address crossChainNFTL1Addr = vm.envAddress("GOERLI_CROSSCHAINNFT");
+        if (block.chainid == 31337) {
+            DeployCrossChainNFT deployer = new DeployCrossChainNFT();
+            crossChainNFTL1Addr = address(deployer.run());
+        } else {
+            crossChainNFTL1Addr = vm.envAddress("GOERLI_CROSSCHAINNFT");
+        }
         // Get the addresses of the CrossChainNFT contracts deployed on Layer 2
         address[3] memory crossChainNFTL2Addr = [
             vm.envAddress("OP_CROSSCHAINNFT"),
@@ -70,6 +77,6 @@ contract DeployFromL1ControlL2 is Script {
             );
         }
         // Return the deployed FromL1ControlL2 contract instance and HelperConfig contract instance
-        return (fromL1ControlL2, helperConfig);
+        return (fromL1ControlL2, helperConfig, crossChainNFTL1Addr);
     }
 }
