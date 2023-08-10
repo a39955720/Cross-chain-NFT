@@ -3,33 +3,28 @@ pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
 import {FromL1ControlL2} from "../src/FromL1ControlL2.sol";
-import {DeployCrossChainNFT} from "./DeployCrossChainNFT.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {AddConsumer, CreateSubscription, FundSubscription} from "./Interactions.s.sol";
 
 contract DeployFromL1ControlL2 is Script {
-    function run() external returns (FromL1ControlL2, HelperConfig, address) {
-        // Create a new instance of the HelperConfig contract
-        HelperConfig helperConfig = new HelperConfig();
-        AddConsumer addConsumer;
-        address crossChainNFTL1Addr;
-        // Get the address of the CrossChainNFT contract deployed on Layer 1 (Goerli testnet)
-        if (block.chainid == 31337) {
-            DeployCrossChainNFT deployer = new DeployCrossChainNFT();
-            crossChainNFTL1Addr = address(deployer.run());
-        } else {
-            crossChainNFTL1Addr = vm.envAddress("GOERLI_CROSSCHAINNFT");
-        }
-        // Get the addresses of the CrossChainNFT contracts deployed on Layer 2
-        address[3] memory crossChainNFTL2Addr = [
-            vm.envAddress("OP_CROSSCHAINNFT"),
-            vm.envAddress("BASE_CROSSCHAINNFT"),
-            vm.envAddress("ZORA_CROSSCHAINNFT")
-        ];
-        // Get the password from the environment variable
-        uint256 password = vm.envUint("PASSWORD");
-        // Get the VRF subscription details from the active network configuration in the HelperConfig contract
+    address op_CrossChainNFTL2Addr = vm.envAddress("OP_CROSSCHAINNFT");
+    address base_CrossChainNFTL2Addr = vm.envAddress("BASE_CROSSCHAINNFT");
+    address zora_CrossChainNFTL2Addr = vm.envAddress("ZORA_CROSSCHAINNFT");
+
+    // Get the password from the environment variable
+    uint256 password = vm.envUint("PASSWORD");
+
+    // Create a new instance of the HelperConfig contract
+    HelperConfig helperConfig = new HelperConfig();
+    AddConsumer addConsumer;
+
+    function run() external returns (FromL1ControlL2, HelperConfig) {
+        // Get the VRF subscription and L1CrossChainNFTAddress and L2CrossDomainMessengerAddress details from the active network configuration in the HelperConfig contract
         (
+            address op_CrossDomainMessengerAddr,
+            address base_CrossDomainMessengerAddr,
+            address zora_CrossDomainMessengerAddr,
+            address crossChainNFTL1Addr,
             uint64 subscriptionId,
             bytes32 gasLane,
             uint32 callbackGasLimit,
@@ -37,6 +32,7 @@ contract DeployFromL1ControlL2 is Script {
             address link,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();
+
         // If there is no existing VRF subscription, create and fund a new one
         if (subscriptionId == 0) {
             CreateSubscription createSubscription = new CreateSubscription();
@@ -57,8 +53,13 @@ contract DeployFromL1ControlL2 is Script {
         vm.startBroadcast(deployerKey);
         // Deploy the FromL1ControlL2 contract with the specified parameters
         FromL1ControlL2 fromL1ControlL2 = new FromL1ControlL2(
+            op_CrossDomainMessengerAddr,
+            base_CrossDomainMessengerAddr,
+            zora_CrossDomainMessengerAddr,
             crossChainNFTL1Addr,
-            crossChainNFTL2Addr,
+            op_CrossChainNFTL2Addr,
+            base_CrossChainNFTL2Addr,
+            zora_CrossChainNFTL2Addr,
             password,
             vrfCoordinatorV2,
             subscriptionId,
@@ -77,6 +78,6 @@ contract DeployFromL1ControlL2 is Script {
             );
         }
         // Return the deployed FromL1ControlL2 contract instance and HelperConfig contract instance
-        return (fromL1ControlL2, helperConfig, crossChainNFTL1Addr);
+        return (fromL1ControlL2, helperConfig);
     }
 }

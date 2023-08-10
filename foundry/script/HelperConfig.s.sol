@@ -2,14 +2,22 @@
 pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
+import {CrossChainNFT} from "../src/CrossChainNFT.sol";
+import {DeployCrossChainNFT} from "./DeployCrossChainNFT.s.sol";
+import {CrossDomainEnabled} from "../lib/node_modules/@eth-optimism/contracts/libraries/bridge/CrossDomainEnabled.sol";
 import {VRFCoordinatorV2Mock} from "../test/mocks/VRFCoordinatorV2Mock.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
+import {CrossDomainMessenger} from "../test/mocks/CrossDomainMessenger.sol";
 
 contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
     // Struct that defines the network configuration.
     struct NetworkConfig {
+        address op_CrossDomainMessengerAddr; //Address of the CrossDomainMessenger optimism Address
+        address base_CrossDomainMessengerAddr; //Address of the CrossDomainMessenger base Address
+        address zora_CrossDomainMessengerAddr; //Address of the CrossDomainMessenger zora Address
+        address crossChainNFTL1Addr; // Address of the CrossChainNFT L1 Address
         uint64 subscriptionId; // Id of subscription to use
         bytes32 gasLane; // Address of the gas lane contract
         uint32 callbackGasLimit; // Gas limit for callbacks
@@ -40,6 +48,10 @@ contract HelperConfig is Script {
         returns (NetworkConfig memory goerliNetworkConfig)
     {
         goerliNetworkConfig = NetworkConfig({
+            op_CrossDomainMessengerAddr: 0x5086d1eEF304eb5284A0f6720f79403b4e9bE294,
+            base_CrossDomainMessengerAddr: 0x8e5693140eA606bcEB98761d9beB1BC87383706D,
+            zora_CrossDomainMessengerAddr: 0xD87342e16352D33170557A7dA1e5fB966a60FafC,
+            crossChainNFTL1Addr: vm.envAddress("GOERLI_CROSSCHAINNFT"),
             subscriptionId: 12614,
             gasLane: 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15,
             callbackGasLimit: 2500000, //
@@ -79,11 +91,23 @@ contract HelperConfig is Script {
             address(vrfCoordinatorV2Mock)
         );
 
+        DeployCrossChainNFT deployer = new DeployCrossChainNFT();
+        CrossChainNFT l1CrossChainNFT = deployer.run();
+        address _crossChainNFTL1Addr = address(l1CrossChainNFT);
+
         // Set the network configuration for Anvil.
         anvilNetworkConfig = NetworkConfig({
+            op_CrossDomainMessengerAddr: (address(new CrossDomainMessenger())),
+            base_CrossDomainMessengerAddr: (
+                address(new CrossDomainMessenger())
+            ),
+            zora_CrossDomainMessengerAddr: (
+                address(new CrossDomainMessenger())
+            ),
+            crossChainNFTL1Addr: _crossChainNFTL1Addr,
             subscriptionId: 0, // If left as 0, our scripts will create one!
             gasLane: 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15,
-            callbackGasLimit: 500000, // 500,000 gas
+            callbackGasLimit: 2500000, // 2500,000 gas
             vrfCoordinatorV2: address(vrfCoordinatorV2Mock),
             link: address(link),
             deployerKey: DEFAULT_ANVIL_PRIVATE_KEY

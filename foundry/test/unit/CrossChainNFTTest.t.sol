@@ -4,7 +4,6 @@ pragma solidity ^0.8.18;
 import {DeployCrossChainNFT} from "../../script/DeployCrossChainNFT.s.sol";
 import {CrossChainNFT} from "../../src/CrossChainNFT.sol";
 import {Test, console} from "forge-std/Test.sol";
-import {Vm} from "forge-std/Vm.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 
 // Contract for testing the CrossChainNFT.sol
@@ -17,10 +16,11 @@ contract CrossChainNFTTest is StdCheats, Test {
     }
 
     // Declare public variables
-    CrossChainNFT public crossChainNFT;
-    address public fromL1ControlL2Addr =
+    CrossChainNFT crossChainNFT;
+    address MOCKFROML1CONTROLL2ADDR =
         0x0000000000000000000000000000000000000000;
-    address public MINTER = makeAddr("minter");
+    address MINTER = makeAddr("minter");
+    address RECEIVER = makeAddr("receiver");
 
     // Declare an event for logging NFT minting
     event NftMinted(NFT nft, address minter);
@@ -63,7 +63,7 @@ contract CrossChainNFTTest is StdCheats, Test {
 
         // Expect a revert with the defined custom error message
         vm.expectRevert(customError);
-        crossChainNFT.setFromL1ControlL2Addr(fromL1ControlL2Addr);
+        crossChainNFT.setFromL1ControlL2Addr(MOCKFROML1CONTROLL2ADDR);
 
         // Define another custom error message "CrossChainNFT__AlreadyInitialized()"
         customError = abi.encodeWithSignature(
@@ -71,16 +71,19 @@ contract CrossChainNFTTest is StdCheats, Test {
         );
         // Prank the sender to simulate a owner address
         vm.prank(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-        crossChainNFT.setFromL1ControlL2Addr(fromL1ControlL2Addr);
+        crossChainNFT.setFromL1ControlL2Addr(MOCKFROML1CONTROLL2ADDR);
 
         // Expect a revert with the "CrossChainNFT__AlreadyInitialized()" error
         vm.expectRevert(customError);
         vm.prank(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-        crossChainNFT.setFromL1ControlL2Addr(fromL1ControlL2Addr);
+        crossChainNFT.setFromL1ControlL2Addr(MOCKFROML1CONTROLL2ADDR);
 
         // Assert that the contract has been initialized and the FromL1ControlL2 address is set
         assertEq(crossChainNFT.getInitialized(), true);
-        assertEq(crossChainNFT.getFromL1ControlL2Addr(), fromL1ControlL2Addr);
+        assertEq(
+            crossChainNFT.getFromL1ControlL2Addr(),
+            MOCKFROML1CONTROLL2ADDR
+        );
     }
 
     // Test function to simulate a failure scenario when minting NFTs
@@ -107,20 +110,20 @@ contract CrossChainNFTTest is StdCheats, Test {
     // Test function to simulate a successful scenario when minting NFTs
     function testMintNFTSuccess() public {
         vm.prank(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-        crossChainNFT.setFromL1ControlL2Addr(fromL1ControlL2Addr);
+        crossChainNFT.setFromL1ControlL2Addr(MOCKFROML1CONTROLL2ADDR);
 
-        vm.prank(fromL1ControlL2Addr);
-        vm.expectEmit(true, true, false, true, address(crossChainNFT));
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
+        vm.expectEmit(false, false, false, true, address(crossChainNFT));
         emit NftMinted(NFT(0), MINTER);
         crossChainNFT.mintNFT(MINTER, 0, 0, vm.envUint("PASSWORD"));
 
-        vm.prank(fromL1ControlL2Addr);
-        vm.expectEmit(true, true, false, true, address(crossChainNFT));
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
+        vm.expectEmit(false, false, false, true, address(crossChainNFT));
         emit NftMinted(NFT(1), MINTER);
         crossChainNFT.mintNFT(MINTER, 1, 10, vm.envUint("PASSWORD"));
 
-        vm.prank(fromL1ControlL2Addr);
-        vm.expectEmit(true, true, false, true, address(crossChainNFT));
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
+        vm.expectEmit(false, false, false, true, address(crossChainNFT));
         emit NftMinted(NFT(2), MINTER);
         crossChainNFT.mintNFT(MINTER, 2, 40, vm.envUint("PASSWORD"));
 
@@ -131,31 +134,64 @@ contract CrossChainNFTTest is StdCheats, Test {
 
     // Modifier for minting an NFT before executing a test function
     modifier mintNFT() {
-        vm.prank(fromL1ControlL2Addr);
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
         crossChainNFT.mintNFT(MINTER, 0, 0, vm.envUint("PASSWORD"));
         _;
     }
 
     // Test function to simulate a failure scenario when approving NFT transfer
-    function testApproveFail(address to) public mintNFT {
+    function testApprove() public mintNFT {
         bytes memory customError = abi.encodeWithSignature(
             "CorssChainNFT__YouCannotCallThisFunctionDirectly()"
         );
         vm.expectRevert(customError);
-        crossChainNFT.approve(to, 0);
+        crossChainNFT.approve(RECEIVER, 0);
+
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
+        crossChainNFT.approveFromL1ControlL2(
+            MINTER,
+            RECEIVER,
+            0,
+            vm.envUint("PASSWORD")
+        );
+
+        assertEq(crossChainNFT.getApproved(0), RECEIVER);
     }
 
     // ... (similar test functions for other NFT transfer scenarios)//
 
-    function testTransferFromFail(address to) public mintNFT {
+    modifier approve() {
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
+        crossChainNFT.approveFromL1ControlL2(
+            MINTER,
+            RECEIVER,
+            0,
+            vm.envUint("PASSWORD")
+        );
+        _;
+    }
+
+    function testTransferFrom() public mintNFT approve {
         bytes memory customError = abi.encodeWithSignature(
             "CorssChainNFT__YouCannotCallThisFunctionDirectly()"
         );
         vm.expectRevert(customError);
-        crossChainNFT.transferFrom(MINTER, to, 0);
+        crossChainNFT.transferFrom(MINTER, RECEIVER, 0);
+
+        console.log(crossChainNFT.ownerOf(0));
+        console.log(MINTER);
+        vm.prank(MOCKFROML1CONTROLL2ADDR);
+        crossChainNFT.transferFromL1ControlL2(
+            MINTER,
+            RECEIVER,
+            0,
+            vm.envUint("PASSWORD")
+        );
+
+        assertEq(crossChainNFT.ownerOf(0), RECEIVER);
     }
 
-    function testSafeTransferFromFail(address to) public mintNFT {
+    function testSafeTransferFrom(address to) public mintNFT approve {
         bytes memory customError = abi.encodeWithSignature(
             "CorssChainNFT__YouCannotCallThisFunctionDirectly()"
         );
@@ -163,7 +199,7 @@ contract CrossChainNFTTest is StdCheats, Test {
         crossChainNFT.safeTransferFrom(MINTER, to, 0);
     }
 
-    function testSafeTransferFromFail(
+    function testSafeTransferFrom(
         address to,
         bytes memory data
     ) public mintNFT {
@@ -174,7 +210,7 @@ contract CrossChainNFTTest is StdCheats, Test {
         crossChainNFT.safeTransferFrom(MINTER, to, 0, data);
     }
 
-    function testSetApprovalForAllFail(
+    function testSetApprovalForAll(
         address operator,
         bool approved
     ) public mintNFT {

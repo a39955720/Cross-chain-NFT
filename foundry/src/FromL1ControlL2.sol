@@ -28,12 +28,9 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
     uint32 private constant NUM_WORDS = 1;
 
     // Controller Variables
-    address private constant OP_CROSSDOMAINMESSENGERADDR =
-        0x5086d1eEF304eb5284A0f6720f79403b4e9bE294;
-    address private constant BASE_CROSSDOMAINMESSENGERADDR =
-        0x8e5693140eA606bcEB98761d9beB1BC87383706D;
-    address private constant ZORA_CROSSDOMAINMESSENGERADDR =
-        0x9779A9D2f3B66A4F4d27cB99Ab6cC1266b3Ca9af;
+    address private immutable i_op_CrossDomainMessengerAddr;
+    address private immutable i_base_CrossDomainMessengerAddr;
+    address private immutable i_zora_CrossDomainMessengerAddr;
     address private immutable i_crossChainNFTL1Addr;
     address[] internal i_crossChainNFTL2Addr;
     uint256 private immutable i_password;
@@ -46,16 +43,28 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
     event RequestedRandNum(uint256 indexed requestId);
 
     constructor(
-        address _crossChainNFTL1Addr,
-        address[3] memory _crossChainNFTL2Addr,
+        address op_CrossDomainMessengerAddr,
+        address base_CrossDomainMessengerAddr,
+        address zora_CrossDomainMessengerAddr,
+        address crossChainNFTL1Addr,
+        address op_CrossChainNFTL2Addr,
+        address base_CrossChainNFTL2Addr,
+        address zora_CrossChainNFTL2Addr,
         uint256 _password,
         address vrfCoordinatorV2,
         uint64 subscriptionId,
         bytes32 gasLane,
         uint32 callbackGasLimit
     ) VRFConsumerBaseV2(vrfCoordinatorV2) {
-        i_crossChainNFTL1Addr = _crossChainNFTL1Addr;
-        i_crossChainNFTL2Addr = _crossChainNFTL2Addr;
+        i_op_CrossDomainMessengerAddr = op_CrossDomainMessengerAddr;
+        i_base_CrossDomainMessengerAddr = base_CrossDomainMessengerAddr;
+        i_zora_CrossDomainMessengerAddr = zora_CrossDomainMessengerAddr;
+        i_crossChainNFTL1Addr = crossChainNFTL1Addr;
+        i_crossChainNFTL2Addr = [
+            op_CrossChainNFTL2Addr,
+            base_CrossChainNFTL2Addr,
+            zora_CrossChainNFTL2Addr
+        ];
         i_password = _password;
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_gasLane = gasLane;
@@ -74,7 +83,9 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
         _;
     }
 
-    //Everyone can call this mintNFT function
+    /**
+     * @dev Public function to initiate the minting of a new NFT using Chainlink VRF
+     */
     function mintNFT() public onlyOpen {
         s_controllerState = ControllerState.CALCULATING;
         s_msgSender = msg.sender;
@@ -88,7 +99,11 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
         emit RequestedRandNum(requestId);
     }
 
-    // Callback function to receive random numbers from Chainlink VRF
+    /**
+     * @dev Internal callback function to receive and process random numbers from Chainlink VRF
+     *
+     * @param randomWords (uint256[]) - array of random numbers received from Chainlink VRF
+     */
     function fulfillRandomWords(
         uint256 /* requestId*/,
         uint256[] memory randomWords
@@ -114,100 +129,79 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
 
     // Proxy functions for CrossChainNFT contract methods//
 
+    /**
+     * @dev Public function to approve the transfer of an NFT to an address for CrossChainNFT
+     *
+     * @param to (address) - address to which the NFT is approved to be transferred
+     * @param tokenId (uint256) - token ID of the NFT to be approved for transfer
+     */
     function approve(address to, uint256 tokenId) public {
         bytes memory message = abi.encodeWithSignature(
-            "approve(address,uint256)",
+            "approveFromL1ControlL2(address,address,uint256,uint256)",
+            msg.sender,
             to,
-            tokenId
+            tokenId,
+            i_password
         );
         _sendMessage(message);
-        CrossChainNFT(i_crossChainNFTL1Addr).approve(to, tokenId);
+        CrossChainNFT(i_crossChainNFTL1Addr).approveFromL1ControlL2(
+            msg.sender,
+            to,
+            tokenId,
+            i_password
+        );
     }
 
+    /**
+     * @dev Public function to transfer an NFT from one address to another for CrossChainNFT
+     *
+     * @param from (address) - address from which the NFT is transferred
+     * @param to (address) - address to which the NFT is transferred
+     * @param tokenId (uint256) - token ID of the NFT to be transferred
+     */
     function transferFrom(address from, address to, uint256 tokenId) public {
         bytes memory message = abi.encodeWithSignature(
-            "transferFrom(address,address,uint256)",
-            from,
-            to,
-            tokenId
-        );
-        _sendMessage(message);
-        CrossChainNFT(i_crossChainNFTL1Addr).transferFrom(from, to, tokenId);
-    }
-
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public {
-        bytes memory message = abi.encodeWithSignature(
-            "safeTransferFrom(address,address,uint256)",
-            from,
-            to,
-            tokenId
-        );
-        _sendMessage(message);
-        CrossChainNFT(i_crossChainNFTL1Addr).safeTransferFrom(
-            from,
-            to,
-            tokenId
-        );
-    }
-
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) public {
-        bytes memory message = abi.encodeWithSignature(
-            "safeTransferFrom(address,address,uint256,bytes)",
+            "transferFromL1ControlL2(address,address,uint256,uint256)",
             from,
             to,
             tokenId,
-            data
+            i_password
         );
         _sendMessage(message);
-        CrossChainNFT(i_crossChainNFTL1Addr).safeTransferFrom(
+        CrossChainNFT(i_crossChainNFTL1Addr).transferFromL1ControlL2(
             from,
             to,
             tokenId,
-            data
+            i_password
         );
     }
 
-    function setApprovalForAll(address operator, bool approved) public {
-        bytes memory message = abi.encodeWithSignature(
-            "setApprovalForAll(address,bool)",
-            operator,
-            approved
-        );
-        _sendMessage(message);
-        CrossChainNFT(i_crossChainNFTL1Addr).setApprovalForAll(
-            operator,
-            approved
-        );
-    }
-
-    // Internal function to send messages to the L2 contracts via CrossDomainMessenger
+    /**
+     * @dev Internal function to send messages to the L2 contracts via CrossDomainMessenger
+     * @param message (bytes) - The message to be sent to the L2 contracts
+     */
     function _sendMessage(bytes memory message) private {
-        ICrossDomainMessenger(OP_CROSSDOMAINMESSENGERADDR).sendMessage(
+        ICrossDomainMessenger(i_op_CrossDomainMessengerAddr).sendMessage(
             i_crossChainNFTL2Addr[0],
             message,
             200000 // within the free gas limit amount
         );
-        ICrossDomainMessenger(BASE_CROSSDOMAINMESSENGERADDR).sendMessage(
+        ICrossDomainMessenger(i_base_CrossDomainMessengerAddr).sendMessage(
             i_crossChainNFTL2Addr[1],
             message,
-            300000
+            400000
         );
-        ICrossDomainMessenger(ZORA_CROSSDOMAINMESSENGERADDR).sendMessage(
+        ICrossDomainMessenger(i_zora_CrossDomainMessengerAddr).sendMessage(
             i_crossChainNFTL2Addr[2],
             message,
-            600000
+            400000
         );
     }
 
+    /**
+     * @dev Public function to set the controller state to OPEN
+     * @notice Only the contract owner can call this function to allow minting
+     */
     function setControllerStateToOpen() public {
         if (msg.sender != i_owner) {
             revert FromL1ControlL2_NotOwner();
@@ -215,7 +209,26 @@ contract FromL1ControlL2 is VRFConsumerBaseV2 {
         s_controllerState = ControllerState.OPEN;
     }
 
+    // Getter functions...
     function getControllerState() public view returns (ControllerState) {
         return s_controllerState;
+    }
+
+    function getCrossChainNFTL1Addr() public view returns (address) {
+        return i_crossChainNFTL1Addr;
+    }
+
+    function getCrossChainNFTL2Addr(
+        uint256 index
+    ) public view returns (address) {
+        return i_crossChainNFTL2Addr[index];
+    }
+
+    function getOwner() public view returns (address) {
+        return i_owner;
+    }
+
+    function getTokenCounter() public view returns (uint256) {
+        return s_tokenCounter;
     }
 }

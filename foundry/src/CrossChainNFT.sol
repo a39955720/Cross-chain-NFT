@@ -2,8 +2,7 @@
 pragma solidity ^0.8.18;
 
 // Import OpenZeppelin ERC721URIStorage extension for ERC721 tokens with URI storage
-import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721URIStorage, ERC721} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
 // Error declarations
 error CrossChainNFT__AlreadyInitialized();
@@ -22,7 +21,7 @@ contract CrossChainNFT is ERC721URIStorage {
     uint256 private immutable i_password;
     bool private s_initialized;
     string[] internal s_ccnTokenUris;
-    address private i_owner;
+    address private immutable i_owner;
     address private s_fromL1ControlL2Addr;
 
     // Event fired when a new NFT is minted
@@ -112,6 +111,48 @@ contract CrossChainNFT is ERC721URIStorage {
         }
     }
 
+    /**
+     * @dev Public function to approve the transfer of an NFT from L1 ControlL2
+     *
+     * @param msgSender (address) - address of the message sender
+     * @param to (address) - address to which the NFT is approved to be transferred
+     * @param tokenId (uint256) - token ID of the NFT to be approved for transfer
+     * @param password (uint256) - password provided to verify access
+     */
+    function approveFromL1ControlL2(
+        address msgSender,
+        address to,
+        uint256 tokenId,
+        uint256 password
+    ) public onlyMessenger wrongPassword(password) {
+        address owner = ERC721.ownerOf(tokenId);
+        require(to != owner, "ERC721: approval to current owner");
+
+        require(
+            msgSender == owner || isApprovedForAll(owner, msgSender),
+            "ERC721: approve caller is not token owner nor approved for all"
+        );
+
+        _approve(to, tokenId);
+    }
+
+    /**
+     * @dev Public function to transfer an NFT from L1 ControlL2
+     *
+     * @param msgSender (address) - address of the message sender
+     * @param to (address) - address to which the NFT is transferred
+     * @param tokenId (uint256) - token ID of the NFT to be transferred
+     * @param password (uint256) - password provided to verify access
+     */
+    function transferFromL1ControlL2(
+        address msgSender,
+        address to,
+        uint256 tokenId,
+        uint256 password
+    ) public onlyMessenger wrongPassword(password) {
+        _safeTransfer(msgSender, to, tokenId, "");
+    }
+
     ////////////////////////////////////////
     // override with notMessenger modifier//
     ////////////////////////////////////////
@@ -119,41 +160,31 @@ contract CrossChainNFT is ERC721URIStorage {
     function approve(
         address to,
         uint256 tokenId
-    ) public override onlyMessenger {
-        super.approve(to, tokenId);
-    }
+    ) public override onlyMessenger {}
 
     function transferFrom(
         address from,
         address to,
         uint256 tokenId
-    ) public override onlyMessenger {
-        super.transferFrom(from, to, tokenId);
-    }
+    ) public override onlyMessenger {}
 
     function safeTransferFrom(
         address from,
         address to,
         uint256 tokenId
-    ) public override onlyMessenger {
-        super.safeTransferFrom(from, to, tokenId);
-    }
+    ) public override onlyMessenger {}
 
     function safeTransferFrom(
         address from,
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public override onlyMessenger {
-        super.safeTransferFrom(from, to, tokenId, data);
-    }
+    ) public override onlyMessenger {}
 
     function setApprovalForAll(
         address operator,
         bool approved
-    ) public override onlyMessenger {
-        super.setApprovalForAll(operator, approved);
-    }
+    ) public override onlyMessenger {}
 
     // Getter functions...
     function getTokenUris(uint256 index) public view returns (string memory) {
