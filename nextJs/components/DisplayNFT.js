@@ -8,7 +8,7 @@ export default function DisplayNFT() {
     const chainId = parseInt(chainIdHex)
     const [addressToTokenIds, setAddressToTokenIds] = useState("0")
     const [addressToUris, setAddressToUris] = useState("0")
-    const crossChainNFTAddr = "0xcD020B45E82A2F2b14F3B536714B18251eFBfa8B"
+    const crossChainNFTAddr = "0xf402D559D7a379d342d4c15Eabf756f6Caba402a"
 
     const { runContractFunction: getAddressToTokenIds } = useWeb3Contract({
         abi: crossChainNFTAbi,
@@ -33,7 +33,6 @@ export default function DisplayNFT() {
 
     useEffect(() => {
         const interval = setInterval(updateUI, 500)
-
         return () => {
             clearInterval(interval)
         }

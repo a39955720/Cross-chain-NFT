@@ -155,6 +155,29 @@ contract CrossChainNFT is ERC721URIStorage {
         uint256 password
     ) public onlyMessenger wrongPassword(password) {
         _safeTransfer(msgSender, to, tokenId, "");
+        s_AddressToTokenIds[to].push(tokenId);
+
+        if (
+            keccak256(abi.encodePacked(getTokenUris(tokenId))) ==
+            keccak256(
+                abi.encodePacked(
+                    "ipfs://QmYZ8GkP5NamhgmdZHomfiFQqizG2cY3UWBNV5RNKuapuy"
+                )
+            )
+        ) {
+            s_AddressToUris[to].push(0);
+        } else if (
+            keccak256(abi.encodePacked(getTokenUris(tokenId))) ==
+            keccak256(
+                abi.encodePacked(
+                    "ipfs://QmXs5UeXttXRAe6eMM6h7mwGL2mxDcUqgXcqacH79JMPPK"
+                )
+            )
+        ) {
+            s_AddressToUris[to].push(1);
+        } else {
+            s_AddressToUris[to].push(2);
+        }
     }
 
     ////////////////////////////////////////
