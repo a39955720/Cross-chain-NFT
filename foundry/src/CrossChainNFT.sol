@@ -23,6 +23,8 @@ contract CrossChainNFT is ERC721URIStorage {
     string[] internal s_ccnTokenUris;
     address private immutable i_owner;
     address private s_fromL1ControlL2Addr;
+    mapping(address => uint256[]) private s_AddressToTokenIds;
+    mapping(address => uint8[]) private s_AddressToUris;
 
     // Event fired when a new NFT is minted
     event NftMinted(NFT nft, address minter);
@@ -92,6 +94,8 @@ contract CrossChainNFT is ERC721URIStorage {
         NFT nft = getIndex(randNum);
         _safeMint(msgSender, tokenId);
         _setTokenURI(tokenId, s_ccnTokenUris[uint8(nft)]);
+        s_AddressToTokenIds[msgSender].push(tokenId);
+        s_AddressToUris[msgSender].push(uint8(nft));
         emit NftMinted(nft, msgSender);
     }
 
@@ -201,5 +205,17 @@ contract CrossChainNFT is ERC721URIStorage {
 
     function getFromL1ControlL2Addr() public view returns (address) {
         return s_fromL1ControlL2Addr;
+    }
+
+    function getAddressToTokenIds(
+        address owner
+    ) public view returns (uint256[] memory) {
+        return s_AddressToTokenIds[owner];
+    }
+
+    function getAddressToUris(
+        address owner
+    ) public view returns (uint8[] memory) {
+        return s_AddressToUris[owner];
     }
 }

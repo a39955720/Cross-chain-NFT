@@ -130,6 +130,8 @@ contract CrossChainNFTTest is StdCheats, Test {
         // Assert that the balance and ownership of NFTs are correct
         assertEq(crossChainNFT.balanceOf(MINTER), 3);
         assertEq(crossChainNFT.ownerOf(2), MINTER);
+        assertEq(crossChainNFT.getAddressToTokenIds(MINTER).length, 3);
+        assertEq(crossChainNFT.getAddressToUris(MINTER).length, 3);
     }
 
     // Modifier for minting an NFT before executing a test function
